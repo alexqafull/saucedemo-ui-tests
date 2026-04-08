@@ -1,62 +1,124 @@
-import re
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
-BASE_URL = "https://www.saucedemo.com/"
-USERNAME = "standard_user"
-PASSWORD = "secret_sauce"
-
-
-def open_login_page(page: Page) -> None:
-    page.goto(BASE_URL, wait_until="domcontentloaded", timeout=60000)
-
-
-def login(page: Page) -> None:
-    open_login_page(page)
-    page.locator('[data-test="username"]').fill(USERNAME)
-    page.locator('[data-test="password"]').fill(PASSWORD)
-    page.locator('[data-test="login-button"]').click()
+from config import FIRST_NAME, LAST_NAME, POSTAL_CODE
+from pages.login_page import LoginPage
+from pages.inventory_page import InventoryPage
+from pages.cart_page import CartPage
+from pages.checkout_page import CheckoutPage
+from pages.checkout_overview_page import CheckoutOverviewPage
+from pages.checkout_complete_page import CheckoutCompletePage
 
 
 def test_login_page_opens(page: Page):
-    open_login_page(page)
+    login_page = LoginPage(page)
 
-    expect(page).to_have_url(re.compile(r"saucedemo\.com/?"))
-    expect(page.locator('[data-test="username"]')).to_be_visible()
-    expect(page.locator('[data-test="password"]')).to_be_visible()
-    expect(page.locator('[data-test="login-button"]')).to_be_visible()
+    login_page.open()
+    login_page.should_be_open()
 
 
 def test_standard_user_can_login(page: Page):
-    login(page)
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
 
-    expect(page).to_have_url(re.compile(r".*/inventory\.html"))
-    expect(page.locator('[data-test="inventory-container"]')).to_be_visible()
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.should_be_open()
 
 
-def test_add_product_to_cart(page: Page):
-    login(page)
+def test_add_one_product_to_cart(page: Page):
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
 
-    page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click()
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.should_have_cart_badge("1")
 
-    expect(page.locator('[data-test="shopping-cart-badge"]')).to_have_text("1")
+
+def test_add_two_products_to_cart(page: Page):
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
+
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.add_bike_light_to_cart()
+    inventory_page.should_have_cart_badge("2")
 
 
 def test_cart_contains_selected_product(page: Page):
-    login(page)
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
+    cart_page = CartPage(page)
 
-    page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click()
-    page.locator('[data-test="shopping-cart-link"]').click()
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.open_cart()
 
-    expect(page).to_have_url(re.compile(r".*/cart\.html"))
-    expect(page.locator('[data-test="inventory-item-name"]')).to_have_text("Sauce Labs Backpack")
+    cart_page.should_be_open()
+    cart_page.should_contain_product("Sauce Labs Backpack")
 
 
-def test_checkout_step_one_opens(page: Page):
-    login(page)
+def test_user_can_open_checkout_step_one(page: Page):
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
+    cart_page = CartPage(page)
+    checkout_page = CheckoutPage(page)
 
-    page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click()
-    page.locator('[data-test="shopping-cart-link"]').click()
-    page.locator('[data-test="checkout"]').click()
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.open_cart()
+    cart_page.click_checkout()
 
-    expect(page).to_have_url(re.compile(r".*/checkout-step-one\.html"))
-    expect(page.locator('[data-test="firstName"]')).to_be_visible()
+    checkout_page.should_be_open()
+
+
+def test_user_can_open_checkout_overview(page: Page):
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
+    cart_page = CartPage(page)
+    checkout_page = CheckoutPage(page)
+    overview_page = CheckoutOverviewPage(page)
+
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.open_cart()
+    cart_page.click_checkout()
+    checkout_page.fill_checkout_information(FIRST_NAME, LAST_NAME, POSTAL_CODE)
+    checkout_page.continue_checkout()
+
+    overview_page.should_be_open()
+
+
+def test_user_can_finish_order(page: Page):
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
+    cart_page = CartPage(page)
+    checkout_page = CheckoutPage(page)
+    overview_page = CheckoutOverviewPage(page)
+    complete_page = CheckoutCompletePage(page)
+
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.open_cart()
+    cart_page.click_checkout()
+    checkout_page.fill_checkout_information(FIRST_NAME, LAST_NAME, POSTAL_CODE)
+    checkout_page.continue_checkout()
+    overview_page.finish_checkout()
+
+    complete_page.should_be_open()
+
+
+def test_standard_user_can_logout(page: Page):
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
+
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.logout()
+
+    login_page.should_be_open()
