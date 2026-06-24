@@ -13,3 +13,7 @@ class CartPage:
 
     def click_checkout(self):
         self.page.locator('[data-test="checkout"]').click()
+
+    def should_contain_products(self, product_names):
+        for product_name in product_names:
+            expect(self.page.get_by_text(product_name)).to_be_visible()

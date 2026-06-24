@@ -122,3 +122,20 @@ def test_standard_user_can_logout(page: Page):
     inventory_page.logout()
 
     login_page.should_be_open()
+
+def test_cart_contains_two_selected_products(page: Page):
+    login_page =  LoginPage(page)
+    inventory_page = InventoryPage(page)
+    cart_page = CartPage(page)
+
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.add_bike_light_to_cart()
+    inventory_page.open_cart()
+
+    cart_page.should_be_open()
+    cart_page.should_contain_products([
+        "Sauce Labs Backpack",
+        "Sauce Labs Bike Light"
+    ])
