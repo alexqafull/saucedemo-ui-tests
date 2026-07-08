@@ -139,3 +139,26 @@ def test_cart_contains_two_selected_products(page: Page):
         "Sauce Labs Backpack",
         "Sauce Labs Bike Light"
     ])
+##В pages лежит логика конкретных страниц: действия и проверки.
+##В tests лежат тестовые сценарии.
+##Тесты используют page objects из pages, чтобы не писать локаторы прямо в каждом тесте.
+
+def test_finish_order_success_message(page: Page):
+    login_page = LoginPage(page)
+    inventory_page = InventoryPage(page)
+    cart_page = CartPage(page)
+    checkout_page = CheckoutPage(page)
+    overview_page = CheckoutOverviewPage(page)
+    complete_page = CheckoutCompletePage(page)
+
+    login_page.open()
+    login_page.login_as_standard_user()
+    inventory_page.add_backpack_to_cart()
+    inventory_page.open_cart()
+    cart_page.click_checkout()
+    checkout_page.fill_checkout_information(FIRST_NAME, LAST_NAME, POSTAL_CODE)
+    checkout_page.continue_checkout()
+    overview_page.finish_checkout()
+
+    complete_page.should_be_open()
+    complete_page.should_have_complete_text("Thank you for your order!")
